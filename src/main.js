@@ -1,6 +1,6 @@
 /**
- * 合同会社WEV - メインJavaScript
- * ポップデザイン対応：スクロールアニメーション、ナビゲーション制御、カウンターアニメーション
+ * 合同会社サンプルクリエイティブ - メインJavaScript
+ * ミニマルデザイン対応
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Intersection Observerによるスクロールアニメーション
+ * スクロールアニメーション（Intersection Observer）
  */
 function initScrollAnimations() {
   const observer = new IntersectionObserver(
@@ -24,38 +24,30 @@ function initScrollAnimations() {
         }
       });
     },
-    {
-      threshold: 0.1,
-      rootMargin: '0px 0px -40px 0px',
-    }
+    { threshold: 0.1, rootMargin: '0px 0px -60px 0px' }
   );
 
-  document.querySelectorAll('.animate-pop').forEach((el) => {
-    observer.observe(el);
-  });
+  document
+    .querySelectorAll('.anim-fade, .anim-reveal')
+    .forEach((el) => observer.observe(el));
 }
 
 /**
- * スクロール時のヘッダースタイル変更
+ * スティッキーヘッダー
  */
 function initStickyHeader() {
   const header = document.getElementById('header');
-
   window.addEventListener(
     'scroll',
     () => {
-      if (window.scrollY > 80) {
-        header.classList.add('header--scrolled');
-      } else {
-        header.classList.remove('header--scrolled');
-      }
+      header.classList.toggle('header--scrolled', window.scrollY > 80);
     },
     { passive: true }
   );
 }
 
 /**
- * ハンバーガーメニューの開閉制御
+ * ハンバーガーメニュー
  */
 function initHamburgerMenu() {
   const hamburger = document.getElementById('hamburger');
@@ -64,9 +56,7 @@ function initHamburgerMenu() {
   hamburger.addEventListener('click', () => {
     hamburger.classList.toggle('active');
     nav.classList.toggle('active');
-    document.body.style.overflow = nav.classList.contains('active')
-      ? 'hidden'
-      : '';
+    document.body.style.overflow = nav.classList.contains('active') ? 'hidden' : '';
   });
 
   nav.querySelectorAll('.nav__link').forEach((link) => {
@@ -79,62 +69,50 @@ function initHamburgerMenu() {
 }
 
 /**
- * アンカーリンクのスムーズスクロール
+ * スムーズスクロール
  */
 function initSmoothScroll() {
   document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
     anchor.addEventListener('click', (e) => {
       e.preventDefault();
-      const targetId = anchor.getAttribute('href');
-      if (targetId === '#') return;
-
-      const targetElement = document.querySelector(targetId);
-      if (targetElement) {
-        const headerOffset = 80;
-        const elementPosition = targetElement.getBoundingClientRect().top;
-        const offsetPosition =
-          elementPosition + window.pageYOffset - headerOffset;
-
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth',
-        });
+      const id = anchor.getAttribute('href');
+      if (id === '#') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      const el = document.querySelector(id);
+      if (el) {
+        const offset = 80;
+        const y = el.getBoundingClientRect().top + window.pageYOffset - offset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
       }
     });
   });
 }
 
 /**
- * 数字のカウントアップアニメーション
+ * カウンターアニメーション
  */
 function initCounterAnimation() {
-  const counters = document.querySelectorAll('.stat-chip__number[data-count]');
-
+  const counters = document.querySelectorAll('[data-count]');
   const observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const target = entry.target;
-          const countTo = parseInt(target.getAttribute('data-count'), 10);
-          const duration = 2000;
-          const startTime = performance.now();
+          const end = parseInt(target.dataset.count, 10);
+          const duration = 2200;
+          const start = performance.now();
 
-          function updateCounter(currentTime) {
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const easedProgress =
-              progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-
-            target.textContent = Math.floor(countTo * easedProgress);
-
-            if (progress < 1) {
-              requestAnimationFrame(updateCounter);
-            } else {
-              target.textContent = countTo;
-            }
+          function tick(now) {
+            const t = Math.min((now - start) / duration, 1);
+            const eased = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+            target.textContent = Math.floor(end * eased);
+            if (t < 1) requestAnimationFrame(tick);
+            else target.textContent = end;
           }
 
-          requestAnimationFrame(updateCounter);
+          requestAnimationFrame(tick);
           observer.unobserve(target);
         }
       });
@@ -142,21 +120,19 @@ function initCounterAnimation() {
     { threshold: 0.5 }
   );
 
-  counters.forEach((counter) => observer.observe(counter));
+  counters.forEach((c) => observer.observe(c));
 }
 
 /**
- * フォーム送信ハンドラ（Google Forms連携）
+ * フォーム送信（Google Forms連携）
  */
 function initFormHandler() {
   const form = document.getElementById('contact-form');
   if (!form) return;
 
-  // Google FormsのエンドポイントURL
   const GOOGLE_FORM_URL =
     'https://docs.google.com/forms/d/e/1FAIpQLScLFiZyJ-yJ0W3nwxm8oEyne42Spkup50RrF4axR1MX0yF_Xw/formResponse';
 
-  // HPフォームのname属性 → Google FormのEntry IDマッピング
   const FIELD_MAP = {
     name: 'entry.1000159542',
     company: 'entry.1909823128',
@@ -166,7 +142,6 @@ function initFormHandler() {
     message: 'entry.495810975',
   };
 
-  // ご相談内容の選択肢をGoogleフォーム側のラベルに変換
   const SERVICE_LABELS = {
     youtube: 'YouTube運用代行',
     tiktok: 'TikTok運用代行',
@@ -177,59 +152,41 @@ function initFormHandler() {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    const original = btn.innerHTML;
 
-    const submitBtn = document.getElementById('submit-btn');
-    const originalText = submitBtn.innerHTML;
+    btn.textContent = '送信中...';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
 
-    // 送信中の表示
-    submitBtn.innerHTML = '<span>送信中... ⏳</span>';
-    submitBtn.disabled = true;
-
-    // フォームデータの組み立て
-    const formData = new FormData();
-    formData.append(FIELD_MAP.name, form.name.value);
-    formData.append(FIELD_MAP.company, form.company.value);
-    formData.append(FIELD_MAP.email, form.email.value);
-    formData.append(FIELD_MAP.phone, form.phone.value);
-    formData.append(
-      FIELD_MAP.service,
-      SERVICE_LABELS[form.service.value] || ''
-    );
-    formData.append(FIELD_MAP.message, form.message.value);
+    const fd = new FormData();
+    fd.append(FIELD_MAP.name, form.name.value);
+    fd.append(FIELD_MAP.company, form.company.value);
+    fd.append(FIELD_MAP.email, form.email.value);
+    fd.append(FIELD_MAP.phone, form.phone.value);
+    fd.append(FIELD_MAP.service, SERVICE_LABELS[form.service.value] || '');
+    fd.append(FIELD_MAP.message, form.message.value);
 
     try {
-      // Google Formsへ送信（CORSエラーが出るが送信自体は成功する）
-      await fetch(GOOGLE_FORM_URL, {
-        method: 'POST',
-        body: formData,
-        mode: 'no-cors',
-      });
-
-      // 成功表示
-      submitBtn.innerHTML = '<span>送信しました ✅</span>';
-      submitBtn.style.background = '#00f5d4';
-      submitBtn.style.color = '#1a1a2e';
-
-      setTimeout(() => {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-        submitBtn.style.background = '';
-        submitBtn.style.color = '';
-        form.reset();
-      }, 3000);
-    } catch (error) {
-      // エラーでも no-cors モードではほぼ成功しているので成功扱い
-      submitBtn.innerHTML = '<span>送信しました ✅</span>';
-      submitBtn.style.background = '#00f5d4';
-      submitBtn.style.color = '#1a1a2e';
-
-      setTimeout(() => {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-        submitBtn.style.background = '';
-        submitBtn.style.color = '';
-        form.reset();
-      }, 3000);
+      await fetch(GOOGLE_FORM_URL, { method: 'POST', body: fd, mode: 'no-cors' });
+    } catch (_) {
+      /* no-corsモードでは常に成功 */
     }
+
+    btn.textContent = '送信しました';
+    btn.style.opacity = '1';
+    btn.style.background = 'var(--accent)';
+    btn.style.color = 'var(--white)';
+    btn.style.borderColor = 'var(--accent)';
+
+    setTimeout(() => {
+      btn.innerHTML = original;
+      btn.disabled = false;
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+      btn.style.opacity = '';
+      form.reset();
+    }, 3000);
   });
 }
